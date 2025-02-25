@@ -509,17 +509,21 @@ print(f"The average age of users is: {{avg_age:.2f}}")
                     func_name = func_call.name
                     func_args_str = func_call.arguments
 
+                    # Append the assistant's message with the tool call
                     messages.append(
                         {
                             "role": "assistant",
                             "content": None,
                             "tool_calls": [
                                 {
-                                    "id": tool_call.id,
+                                    "id": tool_call.id if hasattr(tool_call, 'id') else "call_" + str(time.time()),
                                     "type": "function",
-                                    "function": func_call,
+                                    "function": {
+                                        "name": func_name,
+                                        "arguments": func_args_str
+                                    }
                                 }
-                            ],
+                            ]
                         }
                     )
 
@@ -573,10 +577,11 @@ print(f"The average age of users is: {{avg_age:.2f}}")
                         )
 
                         # Append the function call result into our messages as a tool response
+                        # Append the tool response
                         messages.append(
                             {
                                 "role": "tool",
-                                "tool_call_id": tool_call.id,
+                                "tool_call_id": tool_call.id if hasattr(tool_call, 'id') else "call_" + str(time.time()),
                                 "content": json.dumps({"result": str(result)}),
                             }
                         )
@@ -584,10 +589,11 @@ print(f"The average age of users is: {{avg_age:.2f}}")
                     except Exception as e:
                         error_msg = f"Argument validation failed for {func_name}: {e}"
                         console.print(f"[red]{error_msg}[/red]")
+                        # Append the error response
                         messages.append(
                             {
                                 "role": "tool",
-                                "tool_call_id": tool_call.id,
+                                "tool_call_id": tool_call.id if hasattr(tool_call, 'id') else "call_" + str(time.time()),
                                 "content": json.dumps({"error": error_msg}),
                             }
                         )
