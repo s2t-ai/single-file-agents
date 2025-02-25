@@ -458,7 +458,24 @@ print(f"The average age of users is: {{avg_age:.2f}}")
     )
     
     # Initialize messages with proper typing for OpenAI chat
+    # Use a list of dictionaries with string keys and string values
     messages = [{"role": "user", "content": completed_prompt}]
+    
+    # Define a helper function to create tool call messages
+    def create_tool_call_message(role, tool_call_id=None, content=None, tool_calls=None):
+        """Create a properly formatted message for OpenAI API."""
+        message = {"role": role}
+        
+        if content is not None:
+            message["content"] = content
+            
+        if tool_call_id is not None:
+            message["tool_call_id"] = tool_call_id
+            
+        if tool_calls is not None:
+            message["tool_calls"] = tool_calls
+            
+        return message
 
     compute_iterations = 0
     break_loop = False
@@ -510,22 +527,18 @@ print(f"The average age of users is: {{avg_age:.2f}}")
                     func_args_str = func_call.arguments
 
                     # Append the assistant's message with the tool call
-                    messages.append(
+                    tool_call_id = tool_call.id if hasattr(tool_call, 'id') else "call_" + str(time.time())
+                    tool_calls = [
                         {
-                            "role": "assistant",
-                            "content": None,
-                            "tool_calls": [
-                                {
-                                    "id": tool_call.id if hasattr(tool_call, 'id') else "call_" + str(time.time()),
-                                    "type": "function",
-                                    "function": {
-                                        "name": func_name,
-                                        "arguments": func_args_str
-                                    }
-                                }
-                            ]
+                            "id": tool_call_id,
+                            "type": "function",
+                            "function": {
+                                "name": func_name,
+                                "arguments": func_args_str
+                            }
                         }
-                    )
+                    ]
+                    messages.append(create_tool_call_message("assistant", content=None, tool_calls=tool_calls))
 
                     console.print(
                         f"[blue]Function Call:[/blue] {func_name}({func_args_str})"
@@ -577,13 +590,12 @@ print(f"The average age of users is: {{avg_age:.2f}}")
                         )
 
                         # Append the function call result into our messages as a tool response
-                        # Append the tool response
                         messages.append(
-                            {
-                                "role": "tool",
-                                "tool_call_id": tool_call.id if hasattr(tool_call, 'id') else "call_" + str(time.time()),
-                                "content": json.dumps({"result": str(result)}),
-                            }
+                            create_tool_call_message(
+                                "tool", 
+                                tool_call_id=tool_call_id,
+                                content=json.dumps({"result": str(result)})
+                            )
                         )
 
                     except Exception as e:
@@ -591,11 +603,11 @@ print(f"The average age of users is: {{avg_age:.2f}}")
                         console.print(f"[red]{error_msg}[/red]")
                         # Append the error response
                         messages.append(
-                            {
-                                "role": "tool",
-                                "tool_call_id": tool_call.id if hasattr(tool_call, 'id') else "call_" + str(time.time()),
-                                "content": json.dumps({"error": error_msg}),
-                            }
+                            create_tool_call_message(
+                                "tool", 
+                                tool_call_id=tool_call_id,
+                                content=json.dumps({"error": error_msg})
+                            )
                         )
                         continue
                 else:
