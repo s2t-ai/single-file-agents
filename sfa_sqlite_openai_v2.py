@@ -385,8 +385,8 @@ def main():
         try:
             # Generate content with tool support
             response = openai.chat.completions.create(
-                model="o3-mini",
-                # model="gpt-4o-mini",
+                #model="o3-mini",
+                model="gpt-4o-mini",
                 messages=messages,
                 tools=tools,
                 tool_choice="required",
